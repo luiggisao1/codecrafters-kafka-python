@@ -14,9 +14,9 @@ def main():
     with connection as conn:
         data = list(connection.recv(1024))
         print(f"received data: {data}")
-        request_api_key = data[0:2]
-        request_api_version = data[2:4]
-        correlation_id = data[4:8]
+        request_api_key = data[4:6]
+        request_api_version = data[6:8]
+        correlation_id = data[8:12]
         print(f"correlation_id: {correlation_id}")
         # message_size = (0).to_bytes(4, byteorder="big", signed=True)
         # correlation_id = (7).to_bytes(4, byteorder="big", signed=True)
