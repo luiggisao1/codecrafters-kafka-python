@@ -12,7 +12,8 @@ def main():
     connection, address = server.accept() # wait for client
 
     with connection as conn:
-        _ = connection.recv(1024)
+        data = connection.recv(1024)
+        print(f"received data: {data}")
         connection.sendall(b"\x00\x00\x00\x04\x00\x00\x00\x07")
 
 if __name__ == "__main__":
