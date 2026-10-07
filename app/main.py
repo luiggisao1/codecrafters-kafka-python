@@ -12,13 +12,15 @@ def main():
     connection, address = server.accept() # wait for client
 
     with connection as conn:
-        data = conn.recv(1024)
+        data = connection.recv(1024)
+        print(f"received data: {data}")
+        request_api_key = data[4:6]
+        request_api_version = data[6:8]
+        print(f"request api key: {request_api_key}, request api version: {int.from_bytes(request_api_version, byteorder='big')}")
         message_size = data[0:4]
         correlation_id = data[8:12]
-        # message_size = (0).to_bytes(4, byteorder="big", signed=True)
-        # correlation_id = (7).to_bytes(4, byteorder="big", signed=True)
-        response = message_size + correlation_id
-        conn.sendall(response)
+        response = message_size + correlation_id + b"\x00\x23"
+        conn.sendall(bytes(response))
 
 if __name__ == "__main__":
     main()
