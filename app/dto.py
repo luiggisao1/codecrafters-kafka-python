@@ -47,5 +47,4 @@ class ServerResponse:
             message_size
             + self.correlation_id.to_bytes(4, "big")
             + self.body.serialize()
-            + b"\x00"
         )
