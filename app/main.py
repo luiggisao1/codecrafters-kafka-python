@@ -1,20 +1,12 @@
 import socket  # noqa: F401
+import threading
+
 
 def recv_request(conn: socket.socket) -> bytes | None:
     data = conn.recv(1024)
     return data if data else None
 
-
-def main():
-    # You can use print statements as follows for debugging,
-    # they'll be visible when running tests.
-    print("Logs from your program will appear here!")
-
-    # TODO: Uncomment the code below to pass the first stage
-    #
-    server = socket.create_server(("localhost", 9092), reuse_port=True)
-    conn, address = server.accept() # wait for client
-
+def handle_client(conn: socket.socket):
     with conn:
         while (data := recv_request(conn)) is not None:
             request_api_key = data[4:6]
@@ -42,6 +34,20 @@ def main():
 
 
             conn.sendall(bytes(response))
+
+def main():
+    # You can use print statements as follows for debugging,
+    # they'll be visible when running tests.
+    print("Logs from your program will appear here!")
+
+    # TODO: Uncomment the code below to pass the first stage
+    #
+    server = socket.create_server(("localhost", 9092), reuse_port=True)
+    conn, address = server.accept()  # wait for client
+
+    threading.Thread(target=handle_client, args=(conn,)).start()
+
+    handle_client(conn)
 
 if __name__ == "__main__":
     main()
