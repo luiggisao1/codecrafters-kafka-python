@@ -9,17 +9,28 @@ def main():
     # TODO: Uncomment the code below to pass the first stage
     #
     server = socket.create_server(("localhost", 9092), reuse_port=True)
-    connection, address = server.accept() # wait for client
+    conn, address = server.accept() # wait for client
 
-    with connection as conn:
-        data = connection.recv(1024)
-        print(f"received data: {data}")
+    with conn:
+        data = conn.recv(1024)
         request_api_key = data[4:6]
         request_api_version = data[6:8]
-        print(f"request api key: {request_api_key}, request api version: {int.from_bytes(request_api_version, byteorder='big')}")
-        message_size = data[0:4]
+
+        request_message_size = data[0:4]
         correlation_id = data[8:12]
-        response = message_size + correlation_id + b"\x00\x23"
+
+        error_code = b"\x00\x00"
+        api_keys_length = b"\x02"
+        api_key_1 = b"\x00\x12" #18
+        min_version = b"\x00\x00"
+        max_version = b"\x00\x04"
+        tag_buffer_1 = b"\x00"
+        throttle_time_ms = bytes(4) # b"\x00\x00\x00\x00"
+        tag_buffer = bytes(1)
+        response_messages_size = len(correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer).to_bytes(4, byteorder='big', signed=True)
+
+
+        response =  response_messages_size + correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer
         conn.sendall(bytes(response))
 
 if __name__ == "__main__":
