@@ -15,22 +15,27 @@ def main():
         data = conn.recv(1024)
         request_api_key = data[4:6]
         request_api_version = data[6:8]
-
         request_message_size = data[0:4]
         correlation_id = data[8:12]
 
-        error_code = b"\x00\x00"
-        api_keys_length = b"\x02"
-        api_key_1 = b"\x00\x12" #18
-        min_version = b"\x00\x00"
-        max_version = b"\x00\x04"
-        tag_buffer_1 = b"\x00"
-        throttle_time_ms = bytes(4) # b"\x00\x00\x00\x00"
-        tag_buffer = bytes(1)
-        response_messages_size = len(correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer).to_bytes(4, byteorder='big', signed=True)
+        match int.from_bytes(request_api_version, byteorder='big'):
+            case 4:
+                error_code = b"\x00\x00"
+                api_keys_length = b"\x02"
+                api_key_1 = b"\x00\x12"  # 18
+                min_version = b"\x00\x00"
+                max_version = b"\x00\x04"
+                tag_buffer_1 = b"\x00"
+                throttle_time_ms = bytes(4)  # b"\x00\x00\x00\x00"
+                tag_buffer = bytes(1)
+                response_messages_size = len(
+                    correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer).to_bytes(
+                    4, byteorder='big', signed=True)
 
+                response = response_messages_size + correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer
+            case 0:
+                response = request_message_size + correlation_id + b"\x00\x23"
 
-        response =  response_messages_size + correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer
         conn.sendall(bytes(response))
 
 if __name__ == "__main__":
