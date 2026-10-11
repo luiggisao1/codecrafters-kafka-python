@@ -1,6 +1,8 @@
 import socket  # noqa: F401
 import threading
 
+from app.dto import ApiVersion, ApiVersionsResponse, ServerResponse
+
 
 def recv_request(conn: socket.socket) -> bytes | None:
     data = conn.recv(1024)
@@ -15,28 +17,15 @@ def handle_client(conn: socket.socket):
             request_message_size = data[0:4]
             correlation_id = data[8:12]
 
-            match int.from_bytes(request_api_version, byteorder='big'):
+            match int.from_bytes(request_api_version, byteorder="big"):
                 case 4:
-                    error_code = b"\x00\x00"
-                    api_keys_length = b"\x03"
+                    api_versions = [ApiVersion(18, 0, 4, 0), ApiVersion(75, 0, 0, 0)]
+                    api_versions_response = ApiVersionsResponse(0, api_versions, 0)
+                    response = ServerResponse(
+                        int.from_bytes(correlation_id, byteorder="big"),
+                        api_versions_response,
+                    ).serialize()
 
-                    api_key_1 = b"\x00\x12"  # 18
-                    min_version = b"\x00\x00"
-                    max_version = b"\x00\x04"
-                    tag_buffer_1 = b"\x00"
-
-                    api_key_2 = (75).to_bytes(2, byteorder='big', signed=True)
-                    min_version_2 = bytes(2)
-                    max_version_2 = bytes(2)
-                    tag_buffer_2 = bytes(1)
-
-                    throttle_time_ms = bytes(4)  # b"\x00\x00\x00\x00"
-                    tag_buffer = bytes(1)
-                    response_messages_size = len(
-                        correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + api_key_2 + min_version_2 + max_version_2 + tag_buffer_2 + throttle_time_ms + tag_buffer).to_bytes(
-                        4, byteorder='big', signed=True)
-
-                    response = response_messages_size + correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + api_key_2 + min_version_2 + max_version_2 + tag_buffer_2 + throttle_time_ms + tag_buffer
                 case _:
                     response = request_message_size + correlation_id + b"\x00\x23"
 
@@ -46,7 +35,6 @@ def handle_client(conn: socket.socket):
 def main():
     # You can use print statements as follows for debugging,
     # they'll be visible when running tests.
-    print("Logs from your program will appear here!")
 
     # TODO: Uncomment the code below to pass the first stage
     #

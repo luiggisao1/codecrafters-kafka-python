@@ -2,4 +2,9 @@
 name = "codecrafters-kafka"
 version = "0.1.0"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.1",
+    "ruff>=0.17.0",
+]
+[tool.ruff.lint]
+select = ["T201"]
