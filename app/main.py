@@ -1,5 +1,9 @@
 import socket  # noqa: F401
 
+def recv_request(conn: socket.socket) -> bytes | None:
+    data = conn.recv(1024)
+    return data if data else None
+
 
 def main():
     # You can use print statements as follows for debugging,
@@ -12,8 +16,7 @@ def main():
     conn, address = server.accept() # wait for client
 
     with conn:
-        while True:
-            data = conn.recv(1024)
+        while (data := recv_request(conn)) is not None:
             request_api_key = data[4:6]
             request_api_version = data[6:8]
             request_message_size = data[0:4]
