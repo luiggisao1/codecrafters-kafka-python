@@ -33,8 +33,9 @@ def main():
                     4, byteorder='big', signed=True)
 
                 response = response_messages_size + correlation_id + error_code + api_keys_length + api_key_1 + min_version + max_version + tag_buffer_1 + throttle_time_ms + tag_buffer
-            case 0:
+            case _:
                 response = request_message_size + correlation_id + b"\x00\x23"
+
 
         conn.sendall(bytes(response))
 
