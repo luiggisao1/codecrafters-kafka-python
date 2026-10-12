@@ -65,6 +65,7 @@ def handle_client(conn: socket.socket):
     with conn:
         while (data := recv_request(conn)) is not None:
             try:
+                print("client request", data)
                 client_request = ClientRequest.model_validate(data)
                 response = build_response(client_request)
             except Exception as e:
