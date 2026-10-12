@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, model_validator
 from pydantic.dataclasses import dataclass
 
+from app.constants import ApiKey
 from app.models import CompactArray, CompactString
 
 
@@ -23,16 +24,22 @@ class ClientRequest(BaseModel):
         try:
             if isinstance(raw_data, bytes):
                 stream = io.BytesIO(raw_data)
-                message_size = int.from_bytes(stream.read(4), "big")
+                _message_size = int.from_bytes(stream.read(4), "big")
                 api_key = int.from_bytes(stream.read(2), "big")
                 api_version = int.from_bytes(stream.read(2), "big")
                 correlation_id = int.from_bytes(stream.read(4), "big")
-                client_id_length = int.from_bytes(stream.read(2), "big")
-                describe_topic_partition = None
-                client_id = stream.read(client_id_length)
-                tag_buffer = stream.read(1)
+                client_id_length = int.from_bytes(stream.read(2), "big", signed=True)
 
-                if api_key == 75:
+                if client_id_length >= 0:
+                    _client_id = stream.read(client_id_length)
+
+                if api_key == ApiKey.DESCRIBE_TOPIC_PARTITIONS or (
+                    api_key == ApiKey.API_VERSIONS and api_version >= 3
+                ):
+                    _tag_buffer = stream.read(1)
+
+                describe_topic_partition = None
+                if api_key == ApiKey.DESCRIBE_TOPIC_PARTITIONS:
                     describe_topic_partition = (
                         DescribeTopicPartitionRequest.model_validate(
                             stream.getvalue()[stream.tell() :]
@@ -41,14 +48,14 @@ class ClientRequest(BaseModel):
 
                 return {
                     "raw_data": raw_data,
+                    "api_key": api_key,
                     "api_version": api_version,
                     "correlation_id": correlation_id,
                     "describe_topic_partition": describe_topic_partition,
-                    "api_key": api_key,
                 }
 
             return raw_data
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             return None
 
