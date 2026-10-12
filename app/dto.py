@@ -1,8 +1,12 @@
+import io
+import traceback
 import uuid
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, model_validator
 from pydantic.dataclasses import dataclass
+
+from app.models import CompactArray, CompactString
 
 
 class ClientRequest(BaseModel):
@@ -16,26 +20,37 @@ class ClientRequest(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def parse_raw_data(cls, raw_data):
-        if isinstance(raw_data, bytes):
-            api_key = int.from_bytes(raw_data[4:6], "big")
-            api_version = int.from_bytes(raw_data[6:8], "big")
-            correlation_id = int.from_bytes(raw_data[8:12], "big")
-            client_id_length = int.from_bytes(raw_data[12:14], "big")
-            describe_topic_partition = None
-            if api_key == 75:
-                describe_topic_partition = DescribeTopicPartitionRequest.model_validate(
-                    raw_data[14 + client_id_length + 1 :]
-                )
+        try:
+            if isinstance(raw_data, bytes):
+                stream = io.BytesIO(raw_data)
+                message_size = int.from_bytes(stream.read(4), "big")
+                api_key = int.from_bytes(stream.read(2), "big")
+                api_version = int.from_bytes(stream.read(2), "big")
+                correlation_id = int.from_bytes(stream.read(4), "big")
+                client_id_length = int.from_bytes(stream.read(2), "big")
+                describe_topic_partition = None
+                client_id = stream.read(client_id_length)
+                tag_buffer = stream.read(1)
 
-            return {
-                "raw_data": raw_data,
-                "api_version": api_version,
-                "correlation_id": correlation_id,
-                "describe_topic_partition": describe_topic_partition,
-                "api_key": api_key,
-            }
+                if api_key == 75:
+                    describe_topic_partition = (
+                        DescribeTopicPartitionRequest.model_validate(
+                            stream.getvalue()[stream.tell() :]
+                        )
+                    )
 
-        return raw_data
+                return {
+                    "raw_data": raw_data,
+                    "api_version": api_version,
+                    "correlation_id": correlation_id,
+                    "describe_topic_partition": describe_topic_partition,
+                    "api_key": api_key,
+                }
+
+            return raw_data
+        except Exception as e:
+            traceback.print_exc()
+            return None
 
 
 class HeaderResponse(BaseModel):
@@ -114,23 +129,20 @@ class DescribeTopicPartitionRequest(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def parse_raw_data(cls, raw_data):
+    def parse_raw_data(cls, raw_data: bytes):
         if isinstance(raw_data, bytes):
-            array_length = int.from_bytes(raw_data[0:1], "big", signed=True)
+            stream = io.BytesIO(raw_data)
+            items = CompactArray.deserialize_strings(stream)
             topics = []
-            for _ in range(array_length - 1):
-                topic_name_length = (
-                    int.from_bytes(raw_data[1:2], "big", signed=True) - 1
-                )
-                topic_name = raw_data[2 : 2 + topic_name_length].decode("utf-8")
-                topics.append(DescribeTopicRequest(topic_name=topic_name))
-                raw_data = raw_data[2 + topic_name_length + 1 :]
+
+            for item in items:
+                topics.append(DescribeTopicRequest(topic_name=item))
 
             return {
                 "raw_data": raw_data,
                 "topics": topics,
-                "cursor": int.from_bytes(raw_data[4:5], "big", signed=True),
-                "tag_buffer": int.from_bytes(raw_data[5:6], "big", signed=True),
+                "cursor": int.from_bytes(stream.read(1), "big", signed=True),
+                "tag_buffer": int.from_bytes(stream.read(1), "big", signed=True),
             }
 
         return raw_data
@@ -146,11 +158,10 @@ class TopicResponse(BaseModel):
     tag_buffer: int
 
     def serialize(self) -> bytes:
-        topic_name_length = len(self.topic_name) + 1
+        compact_string = CompactString.serialize(self.topic_name)
         return (
             self.error_code.to_bytes(2, "big")
-            + topic_name_length.to_bytes(1, "big", signed=True)
-            + self.topic_name.encode("utf-8")
+            + compact_string
             + self.topic_id.bytes
             + (1 if self.is_internal else 0).to_bytes(1, "big")
             + self.partitions.to_bytes(1, "big")
