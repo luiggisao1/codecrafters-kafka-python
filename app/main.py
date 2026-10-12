@@ -20,7 +20,6 @@ def recv_request(conn: socket.socket) -> bytes | None:
 
 
 def build_response(client_request: ClientRequest) -> bytes:
-
     header = HeaderResponse(
         correlation_id=client_request.correlation_id,
         api_version=client_request.api_version,
@@ -65,7 +64,6 @@ def handle_client(conn: socket.socket):
     with conn:
         while (data := recv_request(conn)) is not None:
             try:
-                print("client request", data)
                 client_request = ClientRequest.model_validate(data)
                 response = build_response(client_request)
             except Exception as e:

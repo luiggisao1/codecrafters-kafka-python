@@ -118,15 +118,18 @@ class DescribeTopicPartitionRequest(BaseModel):
             array_length = int.from_bytes(raw_data[0:1], "big", signed=True)
             topics = []
             for _ in range(array_length - 1):
-                topic_name_length = int.from_bytes(raw_data[1:2], "big", signed=True)
+                topic_name_length = (
+                    int.from_bytes(raw_data[1:2], "big", signed=True) - 1
+                )
                 topic_name = raw_data[2 : 2 + topic_name_length].decode("utf-8")
                 topics.append(DescribeTopicRequest(topic_name=topic_name))
-                raw_data = raw_data[2 + topic_name_length :]
+                raw_data = raw_data[2 + topic_name_length + 1 :]
+
             return {
                 "raw_data": raw_data,
                 "topics": topics,
-                "cursor": 0,
-                "tag_buffer": 0,
+                "cursor": int.from_bytes(raw_data[4:5], "big", signed=True),
+                "tag_buffer": int.from_bytes(raw_data[5:6], "big", signed=True),
             }
 
         return raw_data
