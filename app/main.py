@@ -26,6 +26,8 @@ def build_response(client_request: ClientRequest) -> bytes:
         api_version=client_request.api_version,
     )
 
+    print(f"header: {header}", "client request", client_request)
+
     if client_request.api_key == 75:
         body = DescribeTopicBodyResponse(
             throttle_time_ms=0,
