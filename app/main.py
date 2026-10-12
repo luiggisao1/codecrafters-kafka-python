@@ -24,6 +24,8 @@ def build_response(client_request: ClientRequest) -> bytes:
         api_version=client_request.api_version,
     )
 
+    print(client_request, header)
+
     if client_request.api_version == 4:
         body = ApiVersionsResponse(
             error_code=0,
