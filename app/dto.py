@@ -23,7 +23,7 @@ class ClientRequest(BaseModel):
             describe_topic_partition = None
             if api_key == 75:
                 describe_topic_partition = DescribeTopicPartitionRequest.model_validate(
-                    raw_data[14 + client_id_length :]
+                    raw_data[14 + client_id_length + 1 :]
                 )
 
             return {
@@ -117,7 +117,7 @@ class DescribeTopicPartitionRequest(BaseModel):
         if isinstance(raw_data, bytes):
             array_length = int.from_bytes(raw_data[0:1], "big", signed=True)
             topics = []
-            for _ in range(array_length):
+            for _ in range(array_length - 1):
                 topic_name_length = int.from_bytes(raw_data[1:2], "big", signed=True)
                 topic_name = raw_data[2 : 2 + topic_name_length].decode("utf-8")
                 topics.append(DescribeTopicRequest(topic_name=topic_name))
