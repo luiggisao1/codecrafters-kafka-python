@@ -7,6 +7,7 @@ from pydantic.dataclasses import dataclass
 class ClientRequest(BaseModel):
     raw_data: bytes
 
+    api_key: int
     api_version: int
     correlation_id: int
     describe_topic_partition: DescribeTopicPartitionRequest | None = None
@@ -15,20 +16,21 @@ class ClientRequest(BaseModel):
     @classmethod
     def parse_raw_data(cls, raw_data):
         if isinstance(raw_data, bytes):
+            api_key = int.from_bytes(raw_data[4:6], "big")
             api_version = int.from_bytes(raw_data[6:8], "big")
             correlation_id = int.from_bytes(raw_data[8:12], "big")
-            if api_version == 0:
+            describe_topic_partition = None
+            if api_key == 75:
                 describe_topic_partition = DescribeTopicPartitionRequest.model_validate(
                     raw_data[24:]
                 )
-            else:
-                describe_topic_partition = None
 
             return {
                 "raw_data": raw_data,
                 "api_version": api_version,
                 "correlation_id": correlation_id,
                 "describe_topic_partition": describe_topic_partition,
+                "api_key": api_key,
             }
 
         return raw_data

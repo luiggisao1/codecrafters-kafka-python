@@ -24,18 +24,8 @@ def build_response(client_request: ClientRequest) -> bytes:
         api_version=client_request.api_version,
     )
 
-    print(client_request, header)
 
-    if client_request.api_version == 4:
-        body = ApiVersionsResponse(
-            error_code=0,
-            api_keys=[
-                ApiVersion(api_key=18, min_version=0, max_version=4, tag_buffer=0),
-                ApiVersion(api_key=75, min_version=0, max_version=0, tag_buffer=0),
-            ],
-            throttle_time_ms=0,
-        )
-    else:
+    if client_request.api_key == 75:
         body = DescribeTopicBodyResponse(
             throttle_time_ms=0,
             topics=[
@@ -54,6 +44,15 @@ def build_response(client_request: ClientRequest) -> bytes:
             next_cursor=-1,
             tag_buffer=0,
         )
+    else:
+        body = ApiVersionsResponse(
+            error_code=0,
+            api_keys=[
+                ApiVersion(api_key=18, min_version=0, max_version=4, tag_buffer=0),
+                ApiVersion(api_key=75, min_version=0, max_version=0, tag_buffer=0),
+            ],
+            throttle_time_ms=0,
+        )
 
     return ServerResponse(
         header=header,
@@ -64,8 +63,12 @@ def build_response(client_request: ClientRequest) -> bytes:
 def handle_client(conn: socket.socket):
     with conn:
         while (data := recv_request(conn)) is not None:
-            client_request = ClientRequest.model_validate(data)
-            response = build_response(client_request)
+            try:
+                client_request = ClientRequest.model_validate(data)
+                response = build_response(client_request)
+            except Exception as e:
+                print(f"Error processing request: {e}")
+                break
 
             # match int.from_bytes(request_api_version, byteorder="big"):
             #     case 4:
