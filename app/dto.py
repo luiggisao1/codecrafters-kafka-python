@@ -178,17 +178,14 @@ class DescribeTopicBodyResponse(BodyResponse):
 
     def serialize(self) -> bytes:
         throttle_time_ms_bytes = self.throttle_time_ms.to_bytes(4, "big")
-        topics_array_bytes = (len(self.topics) + 1).to_bytes(1, "big")
-        total_topics_bytes = b"".join([topic.serialize() for topic in self.topics])
+        topic_bytes = CompactArray.serialize_compact_array(
+            self.topics, lambda topic: topic.serialize()
+        )
         next_cursor_bytes = self.next_cursor.to_bytes(1, "big", signed=True)
         tag_buffer_bytes = self.tag_buffer.to_bytes(1, "big", signed=True)
 
         return (
-            throttle_time_ms_bytes
-            + topics_array_bytes
-            + total_topics_bytes
-            + next_cursor_bytes
-            + tag_buffer_bytes
+            throttle_time_ms_bytes + topic_bytes + next_cursor_bytes + tag_buffer_bytes
         )
 
     def size(self) -> int:

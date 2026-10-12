@@ -22,10 +22,10 @@ class CompactString:
 
 class CompactArray:
     @staticmethod
-    def serialize_strings(items: list[str]) -> bytes:
+    def serialize_compact_array(items: list, item_func) -> bytes:
         out = bytearray(encode_uvarint(len(items) + 1))
         for item in items:
-            out.extend(CompactString.serialize(item))
+            out.extend(item_func(item))
         return bytes(out)
 
     @staticmethod
