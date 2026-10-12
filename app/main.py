@@ -46,7 +46,7 @@ def build_response(client_request: ClientRequest) -> bytes:
         )
     else:
         body = ApiVersionsResponse(
-            error_code=0,
+            error_code=0 if client_request.api_version <= 4 else 35,
             api_keys=[
                 ApiVersion(api_key=18, min_version=0, max_version=4, tag_buffer=0),
                 ApiVersion(api_key=75, min_version=0, max_version=0, tag_buffer=0),
