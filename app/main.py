@@ -1,7 +1,7 @@
 import socket  # noqa: F401
 import threading
 import traceback
-
+import uuid
 
 from app.dto import (
     ApiVersion,
@@ -35,7 +35,7 @@ def build_response(client_request: ClientRequest) -> bytes:
                         0
                     ].topic_name,
                     partitions=0,
-                    topic_id="00000000-0000-0000-0000-00000000000",
+                    topic_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
                     is_internal=False,
                     topic_authorized_operations=0,
                     tag_buffer=0,

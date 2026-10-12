@@ -1,3 +1,4 @@
+import uuid
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, model_validator
@@ -138,17 +139,19 @@ class DescribeTopicPartitionRequest(BaseModel):
 class TopicResponse(BaseModel):
     error_code: int
     topic_name: str
-    topic_id: str
+    topic_id: uuid.UUID
     is_internal: bool
     partitions: int
     topic_authorized_operations: int
     tag_buffer: int
 
     def serialize(self) -> bytes:
+        topic_name_length = len(self.topic_name) + 1
         return (
             self.error_code.to_bytes(2, "big")
+            + topic_name_length.to_bytes(1, "big", signed=True)
             + self.topic_name.encode("utf-8")
-            + self.topic_id.encode("utf-8")
+            + self.topic_id.bytes
             + (1 if self.is_internal else 0).to_bytes(1, "big")
             + self.partitions.to_bytes(1, "big")
             + self.topic_authorized_operations.to_bytes(4, "big")
@@ -187,4 +190,6 @@ class ServerResponse(BaseModel):
 
     def serialize(self) -> bytes:
         message_size = (self.body.size() + self.header.size()).to_bytes(4, "big")
-        return message_size + self.header.serialize() + self.body.serialize()
+        result = message_size + self.header.serialize() + self.body.serialize()
+        print("result", result)
+        return result
