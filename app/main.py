@@ -15,6 +15,7 @@ def handle_client(conn: socket.socket):
     with conn:
         while (data := recv_request(conn)) is not None:
             try:
+                print("Received data:", data)
                 client_request = ClientRequest.model_validate(data)
                 response = route_request(client_request)
             except Exception:
