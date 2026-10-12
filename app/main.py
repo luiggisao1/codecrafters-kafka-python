@@ -1,5 +1,7 @@
 import socket  # noqa: F401
 import threading
+import traceback
+
 
 from app.dto import (
     ApiVersion,
@@ -23,7 +25,6 @@ def build_response(client_request: ClientRequest) -> bytes:
         correlation_id=client_request.correlation_id,
         api_version=client_request.api_version,
     )
-
 
     if client_request.api_key == 75:
         body = DescribeTopicBodyResponse(
@@ -67,9 +68,8 @@ def handle_client(conn: socket.socket):
                 client_request = ClientRequest.model_validate(data)
                 response = build_response(client_request)
             except Exception as e:
-                print(f"Error processing request: {e}")
+                traceback.print_exc()
                 break
-
             # match int.from_bytes(request_api_version, byteorder="big"):
             #     case 4:
             #         api_versions = [ApiVersion(18, 0, 4, 0), ApiVersion(75, 0, 0, 0)]

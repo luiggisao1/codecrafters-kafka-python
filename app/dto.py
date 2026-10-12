@@ -19,10 +19,11 @@ class ClientRequest(BaseModel):
             api_key = int.from_bytes(raw_data[4:6], "big")
             api_version = int.from_bytes(raw_data[6:8], "big")
             correlation_id = int.from_bytes(raw_data[8:12], "big")
+            client_id_length = int.from_bytes(raw_data[12:14], "big")
             describe_topic_partition = None
             if api_key == 75:
                 describe_topic_partition = DescribeTopicPartitionRequest.model_validate(
-                    raw_data[24:]
+                    raw_data[14 + client_id_length :]
                 )
 
             return {
