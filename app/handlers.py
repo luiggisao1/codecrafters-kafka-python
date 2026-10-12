@@ -67,7 +67,12 @@ HANDLERS = {
 
 
 def route_request(client_request: ClientRequest) -> bytes:
-    handler = HANDLERS.get(client_request.api_key)
+    try:
+        api_key = ApiKey(client_request.api_key)
+    except ValueError:
+        api_key = None
+
+    handler = HANDLERS.get(api_key) if api_key else None
     if handler:
         response = handler(client_request)
     else:

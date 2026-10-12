@@ -13,7 +13,7 @@ from app.models import CompactArray, CompactString
 class ClientRequest(BaseModel):
     raw_data: bytes
 
-    api_key: int
+    api_key: ApiKey
     api_version: int
     correlation_id: int
     describe_topic_partition: DescribeTopicPartitionRequest | None = None
