@@ -79,47 +79,52 @@ class ClusterMetadata:
 
     @classmethod
     def from_file(cls, path: Path) -> "ClusterMetadata":
-        print("Loading metadata from file:", path)
+
         topics = {}
         stream = io.BytesIO(path.read_bytes())
-        base_offset = int.from_bytes(stream.read(8), byteorder="big")
-        batch_length = int.from_bytes(stream.read(4), byteorder="big")
-        partition_leader_epoch = int.from_bytes(stream.read(4), byteorder="big")
-        magic_byte = int.from_bytes(stream.read(1), byteorder="big")
-        crc = int.from_bytes(stream.read(4), byteorder="big")
-        attributes = int.from_bytes(stream.read(2), byteorder="big")
-        last_offset_delta = int.from_bytes(stream.read(4), byteorder="big")
-        base_timestamp = int.from_bytes(stream.read(8), byteorder="big")
-        max_timestamp = int.from_bytes(stream.read(8), byteorder="big")
-        producer_id = int.from_bytes(stream.read(8), byteorder="big")
-        producer_epoch = int.from_bytes(stream.read(2), byteorder="big")
-        base_sequence = int.from_bytes(stream.read(4), byteorder="big")
-        records_length = int.from_bytes(stream.read(4), byteorder="big")
-        print("records_length", records_length)
-        for _ in range(records_length):
-            record_length = decode_varint(stream)
-            record = stream.read(record_length)
-            record_stream = io.BytesIO(record)
-            record_attributes = int.from_bytes(
-                record_stream.read(1), byteorder="big", signed=True
-            )
-            record_timestamp_delta = decode_varint(record_stream)
-            record_offset_delta = decode_varint(record_stream)
-            key_length = decode_varint(record_stream)
-            if key_length != -1:
-                record_stream.read(key_length)
-            value_length = decode_varint(record_stream)
-            record_value = io.BytesIO(record_stream.read(value_length))
-            # Header of value
-            record_value_frame_version = record_value.read(1)
-            record_value_type = int.from_bytes(record_value.read(1), byteorder="big")
-            print("record_value_type", record_value_type)
-            if record_value_type == TopicRecordType.TOPIC_RECORD:  # TopicRecord
-                record_value_version = record_value.read(1)
-                print("record_value_version", record_value_version)
-                topic_name = CompactString.deserialize(record_value)
-                topic_uuid = uuid.UUID(bytes=record_value.read(16))
 
-                if topic_name:
-                    topics[topic_name] = topic_uuid
+        while stream.tell() < len(stream.getvalue()):
+            base_offset = int.from_bytes(stream.read(8), byteorder="big")
+            batch_length = int.from_bytes(stream.read(4), byteorder="big")
+            partition_leader_epoch = int.from_bytes(stream.read(4), byteorder="big")
+            magic_byte = int.from_bytes(stream.read(1), byteorder="big")
+            crc = int.from_bytes(stream.read(4), byteorder="big")
+            attributes = int.from_bytes(stream.read(2), byteorder="big")
+            last_offset_delta = int.from_bytes(stream.read(4), byteorder="big")
+            base_timestamp = int.from_bytes(stream.read(8), byteorder="big")
+            max_timestamp = int.from_bytes(stream.read(8), byteorder="big")
+            producer_id = int.from_bytes(stream.read(8), byteorder="big")
+            producer_epoch = int.from_bytes(stream.read(2), byteorder="big")
+            base_sequence = int.from_bytes(stream.read(4), byteorder="big")
+            records_length = int.from_bytes(stream.read(4), byteorder="big")
+            print("records_length", records_length)
+            for _ in range(records_length):
+                record_length = decode_varint(stream)
+                record = stream.read(record_length)
+                record_stream = io.BytesIO(record)
+                record_attributes = int.from_bytes(
+                    record_stream.read(1), byteorder="big", signed=True
+                )
+                record_timestamp_delta = decode_varint(record_stream)
+                record_offset_delta = decode_varint(record_stream)
+                key_length = decode_varint(record_stream)
+                if key_length != -1:
+                    record_stream.read(key_length)
+                value_length = decode_varint(record_stream)
+                record_value = io.BytesIO(record_stream.read(value_length))
+                # Header of value
+                record_value_frame_version = record_value.read(1)
+                record_value_type = int.from_bytes(
+                    record_value.read(1), byteorder="big"
+                )
+                print("record_value_type", record_value_type)
+                if record_value_type == TopicRecordType.TOPIC_RECORD:  # TopicRecord
+                    record_value_version = record_value.read(1)
+                    print("record_value_version", record_value_version)
+                    topic_name = CompactString.deserialize(record_value)
+                    topic_uuid = uuid.UUID(bytes=record_value.read(16))
+
+                    if topic_name:
+                        topics[topic_name] = topic_uuid
+            print("tell", stream.tell(), len(stream.getvalue()))
         return cls(topics=topics)
