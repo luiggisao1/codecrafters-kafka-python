@@ -113,8 +113,10 @@ class ClusterMetadata:
             # Header of value
             record_value_frame_version = record_value.read(1)
             record_value_type = int.from_bytes(record_value.read(1), byteorder="big")
+            print("record_value_type", record_value_type)
             if record_value_type == TopicRecordType.TOPIC_RECORD:  # TopicRecord
                 record_value_version = record_value.read(1)
+                print("record_value_version", record_value_version)
                 topic_name = CompactString.deserialize(record_value)
                 topic_uuid = uuid.UUID(bytes=record_value.read(16))
 
