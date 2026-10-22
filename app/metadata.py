@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from pathlib import Path
 import uuid
 
+from pydantic import BaseModel
+
 from app.constants import TopicRecordType
-from app.models import CompactString
+from app.models import CompactString, CompactArray
 from app.utils import decode_varint
 
 
@@ -74,14 +76,22 @@ from app.utils import decode_varint
 #     return stream.getvalue()
 
 
+class ClusterMetadataPartition(BaseModel):
+    topic_uuid: uuid.UUID
+    leader_id: int
+    leader_epoch: int
+    replicas: list[int]
+    isr_replicas: list[int]
+
+
 class ClusterMetadata:
     def __init__(
         self,
         topics: dict[str, uuid.UUID] | None = None,
-        partitions: dict[uuid.UUID, int] | None = None,
+        partitions: dict[uuid.UUID, ClusterMetadataPartition] | None = None,
     ):
         self.topics: dict[str, uuid.UUID] = topics or {}
-        self.partitions: dict[uuid.UUID, int] = partitions or {}
+        self.partitions: dict[uuid.UUID, ClusterMetadataPartition] = partitions or {}
 
     @classmethod
     def from_file(cls, path: Path) -> "ClusterMetadata":
@@ -89,6 +99,7 @@ class ClusterMetadata:
         topics = {}
         partitions = {}
         stream = io.BytesIO(path.read_bytes())
+        print("STREAM DATA FROM FILE", stream.getvalue())
 
         while stream.tell() < len(stream.getvalue()):
             base_offset = int.from_bytes(stream.read(8), byteorder="big")
@@ -137,8 +148,48 @@ class ClusterMetadata:
                 elif record_value_type == TopicRecordType.PARTITION_RECORD:
                     partition_id = record_value.read(4)
                     partition_topic_uuid = uuid.UUID(bytes=record_value.read(16))
-                    partitions[partition_topic_uuid] = (
-                        partitions.get(partition_topic_uuid, 0) + 1
+                    replica_array_length = decode_varint(record_value)
+                    print("replica_array_length", replica_array_length)
+                    replicas = []
+                    isr_replicas = []
+                    for _ in range(replica_array_length - 1):
+                        replica_array = record_value.read(4)
+                        replicas.append(int.from_bytes(replica_array, byteorder="big"))
+
+                    length_of_in_sync_replica_array = decode_varint(record_value)
+                    for _ in range(length_of_in_sync_replica_array - 1):
+                        in_sync_replica_array = record_value.read(4)
+                        isr_replicas.append(
+                            int.from_bytes(in_sync_replica_array, byteorder="big")
+                        )
+
+                    length_of_removing_replicas_array = decode_varint(record_value)
+                    for _ in range(length_of_removing_replicas_array - 1):
+                        removing_replica_array = record_value.read(4)
+
+                    length_of_adding_replicas_array = decode_varint(record_value)
+                    for _ in range(length_of_adding_replicas_array - 1):
+                        adding_replica_array = record_value.read(4)
+
+                    partition_leader = record_value.read(4)
+                    partition_leader_epoch = record_value.read(4)
+                    partition_epoch = record_value.read(4)
+
+                    length_of_directories_array = decode_varint(record_value)
+                    for _ in range(length_of_directories_array - 1):
+                        directory_array = record_value.read(16)
+                        print("directory_array", uuid.UUID(bytes=directory_array))
+
+                    tagged_fields_count = decode_varint(record_value)
+
+                    partitions[partition_topic_uuid] = ClusterMetadataPartition(
+                        topic_uuid=partition_topic_uuid,
+                        leader_id=int.from_bytes(partition_leader, byteorder="big"),
+                        leader_epoch=int.from_bytes(
+                            partition_leader_epoch, byteorder="big"
+                        ),
+                        replicas=replicas,
+                        isr_replicas=isr_replicas,
                     )
 
             print("tell", stream.tell(), len(stream.getvalue()))
