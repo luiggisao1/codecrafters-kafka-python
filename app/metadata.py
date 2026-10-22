@@ -95,6 +95,7 @@ class ClusterMetadata:
         producer_epoch = int.from_bytes(stream.read(2), byteorder="big")
         base_sequence = int.from_bytes(stream.read(4), byteorder="big")
         records_length = int.from_bytes(stream.read(4), byteorder="big")
+        print("records_length", records_length)
         for _ in range(records_length):
             record_length = decode_varint(stream)
             record = stream.read(record_length)
