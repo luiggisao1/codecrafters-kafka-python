@@ -51,12 +51,10 @@ def handle_describe_topic_partitions(
     topics = []
     if client_request.describe_topic_partition:
         for req_topic in client_request.describe_topic_partition.topics:
-            topic = metadata.topics.get(req_topic.topic_name, None)
+            # topic = metadata.topics.get(req_topic.topic_name, None)
             topics.append(
                 TopicResponse(
-                    error_code=ErrorCode.NONE
-                    if topic
-                    else ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
+                    error_code=ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                     topic_name=req_topic.topic_name,
                     partitions=0,
                     topic_id=metadata.topics.get(
