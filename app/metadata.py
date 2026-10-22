@@ -79,6 +79,7 @@ class ClusterMetadata:
 
     @classmethod
     def from_file(cls, path: Path) -> "ClusterMetadata":
+        print("Loading metadata from file:", path)
         topics = {}
         stream = io.BytesIO(path.read_bytes())
         base_offset = int.from_bytes(stream.read(8), byteorder="big")
