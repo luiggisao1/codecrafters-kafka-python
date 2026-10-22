@@ -52,7 +52,7 @@ def handle_describe_topic_partitions(
     if client_request.describe_topic_partition:
         for req_topic in client_request.describe_topic_partition.topics:
             topic = metadata.topics.get(req_topic.topic_name, None)
-            partitions = metadata.partitions.get(topic, 0) if topic else 0
+            partitions = metadata.partitions.get(topic, None) if topic else None
             print("topic", req_topic.topic_name, "partitions", partitions)
             topics.append(
                 TopicResponse(
@@ -60,7 +60,7 @@ def handle_describe_topic_partitions(
                     if topic
                     else ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                     topic_name=req_topic.topic_name,
-                    partitions=0,
+                    partitions=[partitions] if partitions else [],
                     topic_id=topic
                     if topic
                     else uuid.UUID("00000000-0000-0000-0000-000000000000"),

@@ -161,7 +161,7 @@ class TopicResponse(BaseModel):
     topic_name: str
     topic_id: uuid.UUID
     is_internal: bool
-    partitions: ClusterMetadataPartition
+    partitions: list[ClusterMetadataPartition]
     topic_authorized_operations: int
     tag_buffer: int
 
