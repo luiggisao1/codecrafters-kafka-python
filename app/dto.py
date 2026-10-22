@@ -2,6 +2,7 @@ import io
 import traceback
 import uuid
 from abc import ABC, abstractmethod
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 from pydantic.dataclasses import dataclass
@@ -156,6 +157,61 @@ class DescribeTopicPartitionRequest(BaseModel):
         return raw_data
 
 
+class DescribeTopicPartitionResponse(BaseModel):
+    error_code: int
+    partition_index: int
+    leader_id: int
+    leader_epoch: int
+    replica_nodes: list[int]
+    isr_nodes: list[int]
+    eligible_replica_nodes: list[int]
+    last_known_elr: list[int]
+    offline_replicas: list[int]
+    tag_buffer: int
+
+    def __init__(self, /, **data: Any):
+        super().__init__(**data)
+
+    @classmethod
+    def from_cluster_metadata(cls, data: ClusterMetadataPartition, partition_idx: int):
+        return cls(
+            error_code=0,
+            partition_index=partition_idx,
+            leader_id=data.leader_id,
+            leader_epoch=data.leader_epoch,
+            replica_nodes=data.replicas,
+            isr_nodes=data.isr_replicas,
+            eligible_replica_nodes=[],
+            last_known_elr=[],  # TODO: check these values
+            offline_replicas=[],
+            tag_buffer=0,
+        )
+
+    def serialize(self):
+        return (
+            self.error_code.to_bytes(2, "big")
+            + self.partition_index.to_bytes(4, "big")
+            + self.leader_id.to_bytes(4, "big")
+            + self.leader_epoch.to_bytes(4, "big")
+            + CompactArray.serialize_compact_array(
+                self.replica_nodes, lambda node: node.to_bytes(4, "big")
+            )
+            + CompactArray.serialize_compact_array(
+                self.isr_nodes, lambda node: node.to_bytes(4, "big")
+            )
+            + CompactArray.serialize_compact_array(
+                self.eligible_replica_nodes, lambda node: node.to_bytes(4, "big")
+            )
+            + CompactArray.serialize_compact_array(
+                self.last_known_elr, lambda node: node.to_bytes(4, "big")
+            )
+            + CompactArray.serialize_compact_array(
+                self.offline_replicas, lambda node: node.to_bytes(4, "big")
+            )
+            + self.tag_buffer.to_bytes(1, "big")
+        )
+
+
 class TopicResponse(BaseModel):
     error_code: int
     topic_name: str
@@ -167,12 +223,25 @@ class TopicResponse(BaseModel):
 
     def serialize(self) -> bytes:
         compact_string = CompactString.serialize(self.topic_name)
+        partitions_bytes = []
+        for partition in self.partitions:
+            partitions_bytes.append(
+                DescribeTopicPartitionResponse.from_cluster_metadata(
+                    partition, self.partitions.index(partition)
+                ).serialize()
+            )
+
+        print("partitions_bytes", partitions_bytes)
+        partitions_to_bytes = CompactArray.serialize_compact_array(
+            partitions_bytes, lambda partition_l: partition_l
+        )
+
         return (
             self.error_code.to_bytes(2, "big")
             + compact_string
             + self.topic_id.bytes
             + (1 if self.is_internal else 0).to_bytes(1, "big")
-            + (2).to_bytes(1, "big")  # TODO: change this
+            + partitions_to_bytes  # TODO: change this
             + self.topic_authorized_operations.to_bytes(4, "big")
             + self.tag_buffer.to_bytes(1, "big")
         )
