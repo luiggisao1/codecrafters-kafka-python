@@ -60,7 +60,7 @@ def handle_describe_topic_partitions(
                     if topic
                     else ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                     topic_name=req_topic.topic_name,
-                    partitions=partitions,
+                    partitions=0,
                     topic_id=topic
                     if topic
                     else uuid.UUID("00000000-0000-0000-0000-000000000000"),
