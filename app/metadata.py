@@ -82,6 +82,7 @@ class ClusterMetadata:
 
         topics = {}
         stream = io.BytesIO(path.read_bytes())
+        print("stream.getvalue()", stream.getvalue())
 
         while stream.tell() < len(stream.getvalue()):
             base_offset = int.from_bytes(stream.read(8), byteorder="big")
