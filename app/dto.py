@@ -169,9 +169,6 @@ class DescribeTopicPartitionResponse(BaseModel):
     offline_replicas: list[int]
     tag_buffer: int
 
-    def __init__(self, /, **data: Any):
-        super().__init__(**data)
-
     @classmethod
     def from_cluster_metadata(cls, data: ClusterMetadataPartition, partition_idx: int):
         return cls(
@@ -224,14 +221,13 @@ class TopicResponse(BaseModel):
     def serialize(self) -> bytes:
         compact_string = CompactString.serialize(self.topic_name)
         partitions_bytes = []
-        for partition in self.partitions:
+        for idx, partition in enumerate(self.partitions):
             partitions_bytes.append(
                 DescribeTopicPartitionResponse.from_cluster_metadata(
-                    partition, self.partitions.index(partition)
+                    partition, idx
                 ).serialize()
             )
 
-        print("partitions_bytes", partitions_bytes)
         partitions_to_bytes = CompactArray.serialize_compact_array(
             partitions_bytes, lambda partition_l: partition_l
         )
