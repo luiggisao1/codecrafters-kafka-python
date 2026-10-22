@@ -37,6 +37,7 @@ def main():
         ClusterMetadata.from_file(metadata_path) if metadata_path.exists() else None
     )
     print("metadata topics", metadata.topics if metadata else None)
+    print("metadata partitions", metadata.partitions if metadata else None)
     server = socket.create_server(("localhost", 9092), reuse_port=True)
 
     while True:
