@@ -172,7 +172,7 @@ class TopicResponse(BaseModel):
             + compact_string
             + self.topic_id.bytes
             + (1 if self.is_internal else 0).to_bytes(1, "big")
-            + (1).to_bytes(1, "big")  # TODO: change this
+            + (2).to_bytes(1, "big")  # TODO: change this
             + self.topic_authorized_operations.to_bytes(4, "big")
             + self.tag_buffer.to_bytes(1, "big")
         )
