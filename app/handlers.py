@@ -53,6 +53,7 @@ def handle_describe_topic_partitions(
         for req_topic in client_request.describe_topic_partition.topics:
             topic = metadata.topics.get(req_topic.topic_name, None)
             partitions = metadata.partitions.get(topic, 0) if topic else 0
+            print("topic", req_topic.topic_name, "partitions", partitions)
             topics.append(
                 TopicResponse(
                     error_code=ErrorCode.NONE
