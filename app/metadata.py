@@ -1,4 +1,5 @@
 import io
+from dataclasses import dataclass
 from pathlib import Path
 import uuid
 
@@ -74,13 +75,19 @@ from app.utils import decode_varint
 
 
 class ClusterMetadata:
-    def __init__(self, topics: dict[str, uuid.UUID] | None = None):
+    def __init__(
+        self,
+        topics: dict[str, uuid.UUID] | None = None,
+        partitions: dict[uuid.UUID, int] | None = None,
+    ):
         self.topics: dict[str, uuid.UUID] = topics or {}
+        self.partitions: dict[uuid.UUID, int] = partitions or {}
 
     @classmethod
     def from_file(cls, path: Path) -> "ClusterMetadata":
 
         topics = {}
+        partitions = {}
         stream = io.BytesIO(path.read_bytes())
 
         while stream.tell() < len(stream.getvalue()):
@@ -98,6 +105,7 @@ class ClusterMetadata:
             base_sequence = int.from_bytes(stream.read(4), byteorder="big")
             records_length = int.from_bytes(stream.read(4), byteorder="big")
             print("records_length", records_length)
+
             for _ in range(records_length):
                 record_length = decode_varint(stream)
                 record = stream.read(record_length)
@@ -117,14 +125,21 @@ class ClusterMetadata:
                 record_value_type = int.from_bytes(
                     record_value.read(1), byteorder="big"
                 )
+                record_value_version = record_value.read(1)
                 print("record_value_type", record_value_type)
                 if record_value_type == TopicRecordType.TOPIC_RECORD:  # TopicRecord
-                    record_value_version = record_value.read(1)
-                    print("record_value_version", record_value_version)
                     topic_name = CompactString.deserialize(record_value)
                     topic_uuid = uuid.UUID(bytes=record_value.read(16))
 
                     if topic_name:
                         topics[topic_name] = topic_uuid
+
+                elif record_value_type == TopicRecordType.PARTITION_RECORD:
+                    partition_id = record_value.read(4)
+                    partition_topic_uuid = uuid.UUID(bytes=record_value.read(16))
+                    partitions[partition_topic_uuid] = (
+                        partitions.get(partition_topic_uuid, 0) + 1
+                    )
+
             print("tell", stream.tell(), len(stream.getvalue()))
-        return cls(topics=topics)
+        return cls(topics=topics, partitions=partitions)
