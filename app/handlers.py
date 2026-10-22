@@ -59,9 +59,10 @@ def handle_describe_topic_partitions(
                     else ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                     topic_name=req_topic.topic_name,
                     partitions=0,
-                    topic_id=topic
-                    if topic
-                    else uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                    topic_id=metadata.topics.get(
+                        req_topic.topic_name,
+                        uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                    ),
                     is_internal=False,
                     topic_authorized_operations=0,
                     tag_buffer=0,
