@@ -10,9 +10,12 @@ from app.dto import (
     ServerResponse,
     TopicResponse,
 )
+from app.metadata import ClusterMetadata
 
 
-def handle_api_versions(client_request: ClientRequest) -> ServerResponse:
+def handle_api_versions(
+    client_request: ClientRequest, metadata: ClusterMetadata
+) -> ServerResponse:
     header = HeaderResponse(
         correlation_id=client_request.correlation_id,
         api_version=client_request.api_version,
@@ -23,15 +26,24 @@ def handle_api_versions(client_request: ClientRequest) -> ServerResponse:
     body = ApiVersionsResponse(
         error_code=error_code,
         api_keys=[
-            ApiVersion(api_key=ApiKey.API_VERSIONS, min_version=0, max_version=4, tag_buffer=0),
-            ApiVersion(api_key=ApiKey.DESCRIBE_TOPIC_PARTITIONS, min_version=0, max_version=0, tag_buffer=0),
+            ApiVersion(
+                api_key=ApiKey.API_VERSIONS, min_version=0, max_version=4, tag_buffer=0
+            ),
+            ApiVersion(
+                api_key=ApiKey.DESCRIBE_TOPIC_PARTITIONS,
+                min_version=0,
+                max_version=0,
+                tag_buffer=0,
+            ),
         ],
         throttle_time_ms=0,
     )
     return ServerResponse(header=header, body=body)
 
 
-def handle_describe_topic_partitions(client_request: ClientRequest) -> ServerResponse:
+def handle_describe_topic_partitions(
+    client_request: ClientRequest, metadata: ClusterMetadata
+) -> ServerResponse:
     header = HeaderResponse(
         correlation_id=client_request.correlation_id,
         api_version=client_request.api_version,
@@ -44,7 +56,10 @@ def handle_describe_topic_partitions(client_request: ClientRequest) -> ServerRes
                     error_code=ErrorCode.UNKNOWN_TOPIC_OR_PARTITION,
                     topic_name=req_topic.topic_name,
                     partitions=0,
-                    topic_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                    topic_id=metadata.topics.get(
+                        req_topic.topic_name,
+                        uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                    ),
                     is_internal=False,
                     topic_authorized_operations=0,
                     tag_buffer=0,
@@ -66,7 +81,7 @@ HANDLERS = {
 }
 
 
-def route_request(client_request: ClientRequest) -> bytes:
+def route_request(client_request: ClientRequest, metadata: ClusterMetadata) -> bytes:
     try:
         api_key = ApiKey(client_request.api_key)
     except ValueError:
@@ -74,8 +89,8 @@ def route_request(client_request: ClientRequest) -> bytes:
 
     handler = HANDLERS.get(api_key) if api_key else None
     if handler:
-        response = handler(client_request)
+        response = handler(client_request, metadata)
     else:
         # Fallback to ApiVersions handler
-        response = handle_api_versions(client_request)
+        response = handle_api_versions(client_request, metadata)
     return response.serialize()

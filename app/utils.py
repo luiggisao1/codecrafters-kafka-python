@@ -25,6 +25,14 @@ def decode_uvarint(stream: io.BytesIO) -> int:
     return result
 
 
+def decode_varint(stream):
+    # 1. Read the raw variable-length integer using your existing method
+    raw = decode_uvarint(stream)
+
+    # 2. Undo the ZigZag encoding (1 line of arithmetic)
+    return (raw >> 1) ^ -(raw & 1)
+
+
 # 0000 0010
 # 0000 0100 - shift 1
 # 0000 1000 - shift 2
